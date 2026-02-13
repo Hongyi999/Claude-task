@@ -48,9 +48,9 @@ func update_ui() -> void:
 	update_button_states()
 
 func update_player_info(player: Player) -> void:
-	var info = ""
+	var info: String = ""
 	info += "[b]%s[/b] (%s)\n" % [player.player_name, player.hero_name]
-	info += "Gold: %dG\n" % player.gold
+	info += "Gold: %d\n" % player.gold
 	info += "Position: %d\n" % player.board_position
 	info += "Properties: %d\n" % player.owned_properties.size()
 
