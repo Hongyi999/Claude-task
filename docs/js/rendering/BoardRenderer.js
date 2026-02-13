@@ -470,6 +470,93 @@ class BoardRenderer {
     getBoardGroup() {
         return this.boardGroup;
     }
+
+    /**
+     * 🎮 Create player token (cute pixel style)
+     */
+    createPlayerToken(player, position) {
+        const tokenGroup = new THREE.Group();
+        tokenGroup.userData.playerId = player.id;
+
+        // Get space position
+        const spacePos = this.spacePositions[position] || new THREE.Vector3(0, 0, 0);
+
+        // 🎨 Cute pixel player token (cylinder)
+        const tokenGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8); // 8 sides for pixel look
+        const tokenMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(player.color),
+            roughness: 0.6,
+            metalness: 0.4,
+            emissive: new THREE.Color(player.color),
+            emissiveIntensity: 0.3,
+            flatShading: true
+        });
+        const token = new THREE.Mesh(tokenGeometry, tokenMaterial);
+        token.position.y = 1;
+        token.castShadow = true;
+        tokenGroup.add(token);
+
+        // ⭐ Glowing top (player number indicator)
+        const topGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8);
+        const topMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.9
+        });
+        const top = new THREE.Mesh(topGeometry, topMaterial);
+        top.position.y = 1.45;
+        tokenGroup.add(top);
+
+        // Position token at space
+        tokenGroup.position.copy(spacePos);
+
+        return tokenGroup;
+    }
+
+    /**
+     * 🎮 Update player token positions
+     */
+    updatePlayerTokens(players) {
+        // Remove all existing tokens
+        if (this.playerTokens) {
+            while (this.playerTokens.children.length > 0) {
+                this.playerTokens.remove(this.playerTokens.children[0]);
+            }
+        } else {
+            this.playerTokens = new THREE.Group();
+            this.sceneManager.scene.add(this.playerTokens);
+        }
+
+        // Create tokens for all active players
+        players.forEach((player, index) => {
+            if (player.isBankrupt) return;
+
+            const token = this.createPlayerToken(player, player.position);
+
+            // Offset tokens if multiple players on same space
+            const playersOnSpace = players.filter(p =>
+                !p.isBankrupt && p.position === player.position
+            );
+            if (playersOnSpace.length > 1) {
+                const idx = playersOnSpace.indexOf(player);
+                const offset = (idx - (playersOnSpace.length - 1) / 2) * 0.6;
+                token.position.x += offset;
+            }
+
+            this.playerTokens.add(token);
+        });
+    }
+
+    /**
+     * 🎥 Animate player movement
+     */
+    animatePlayerMove(playerId, fromPosition, toPosition, duration = 1000) {
+        // TODO: Implement smooth movement animation using GSAP
+        // For now, just update position
+        if (typeof gameState !== 'undefined' && gameState.players) {
+            this.updatePlayerTokens(gameState.players);
+        }
+    }
 }
 
 // Export

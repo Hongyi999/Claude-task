@@ -460,6 +460,11 @@ function startGame() {
     // Initialize game UI
     updateGameUI();
     addEventLog(`🎮 Game started! ${gameState.players[0].name}'s turn.`);
+
+    // Create player tokens on 3D board
+    if (boardRenderer) {
+        boardRenderer.updatePlayerTokens(gameState.players);
+    }
 }
 
 /**
@@ -499,6 +504,11 @@ function rollDice() {
 
     addEventLog(`${currentPlayer.name} rolled ${die1} + ${die2} = ${total}`);
     addEventLog(`${currentPlayer.name} moved to ${PROPERTIES[newPos]?.name || 'Space ' + newPos}`);
+
+    // Update 3D player token position
+    if (boardRenderer) {
+        boardRenderer.updatePlayerTokens(gameState.players);
+    }
 
     // Handle landing on space
     setTimeout(() => {
