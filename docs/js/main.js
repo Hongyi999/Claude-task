@@ -431,17 +431,330 @@ function startGame() {
         .map(card => HEROES[card.dataset.index]);
 
     if (selectedHeroes.length < 2) {
-        alert('Please select at least 2 heroes');
+        alert(i18n.t('heroSelection.selectHeroes', { count: 2 }) || 'Please select at least 2 heroes');
         return;
     }
 
     console.log('🎮 Starting game with heroes:', selectedHeroes);
 
-    // Initialize game
-    // TODO: Create game instance with selected heroes
+    // Initialize game state
+    gameState.players = [];
+    selectedHeroes.forEach((hero, index) => {
+        const player = new Player(
+            index,
+            `Player ${index + 1}`,
+            hero,
+            GAME_CONSTANTS.PLAYER_COLORS[index]
+        );
+        gameState.players.push(player);
+    });
+
+    gameState.currentPlayerIndex = 0;
+    gameState.turnNumber = 1;
+    gameState.gameStarted = true;
+    gameState.diceRolled = false;
 
     // Show game screen
     showGameScreen();
+
+    // Initialize game UI
+    updateGameUI();
+    addEventLog(`🎮 Game started! ${gameState.players[0].name}'s turn.`);
+}
+
+/**
+ * 🎲 Roll dice
+ */
+function rollDice() {
+    if (gameState.diceRolled) {
+        addEventLog('⚠️ Already rolled this turn!');
+        return;
+    }
+
+    const die1 = Math.floor(Math.random() * 6) + 1;
+    const die2 = Math.floor(Math.random() * 6) + 1;
+    const total = die1 + die2;
+
+    gameState.diceRolled = true;
+
+    // Animate dice (show result)
+    const diceResult = document.getElementById('dice-result');
+    diceResult.innerHTML = `
+        <div class="dice-animation">
+            🎲 ${die1} + ${die2} = <strong>${total}</strong>
+        </div>
+    `;
+    diceResult.style.display = 'block';
+
+    // Move player
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    const oldPos = currentPlayer.position;
+    const newPos = (oldPos + total) % GAME_CONSTANTS.TOTAL_SPACES;
+    currentPlayer.position = newPos;
+
+    // Check if passed fountain (position 0)
+    if (newPos < oldPos) {
+        currentPlayer.collectSalary();
+    }
+
+    addEventLog(`${currentPlayer.name} rolled ${die1} + ${die2} = ${total}`);
+    addEventLog(`${currentPlayer.name} moved to ${PROPERTIES[newPos]?.name || 'Space ' + newPos}`);
+
+    // Handle landing on space
+    setTimeout(() => {
+        handleLanding(currentPlayer);
+        updateGameUI();
+    }, 500);
+
+    // Enable end turn button
+    document.getElementById('roll-dice-btn').disabled = true;
+    document.getElementById('end-turn-btn').disabled = false;
+}
+
+/**
+ * 🎯 Handle landing on a space
+ */
+function handleLanding(player) {
+    const space = PROPERTIES[player.position];
+    if (!space) return;
+
+    if (space.type === 'property') {
+        // Check if someone owns this property
+        const owner = gameState.players.find(p => p.properties.includes(player.position));
+
+        if (!owner) {
+            // Unowned - offer to buy
+            showPropertyPurchaseDialog(player, space, player.position);
+        } else if (owner.id !== player.id) {
+            // Pay rent
+            const rent = calculateRent(space, owner);
+            if (player.gold >= rent) {
+                player.deductGold(rent);
+                owner.addGold(rent);
+                addEventLog(`💸 ${player.name} paid ${rent} gold rent to ${owner.name}`);
+            } else {
+                addEventLog(`⚠️ ${player.name} cannot afford ${rent} gold rent!`);
+                handleBankruptcy(player, owner);
+            }
+        } else {
+            addEventLog(`🏠 ${player.name} landed on their own property`);
+        }
+    } else if (space.type === 'tax') {
+        const taxAmount = 200;
+        player.deductGold(taxAmount);
+        addEventLog(`💰 ${player.name} paid ${taxAmount} gold in taxes`);
+    } else if (space.type === 'event') {
+        addEventLog(`📜 ${player.name}: ${space.description || 'Event space'}`);
+    } else if (space.type === 'fountain') {
+        addEventLog(`⛲ ${player.name} is at the fountain!`);
+    }
+
+    updateGameUI();
+}
+
+/**
+ * 💰 Show property purchase dialog
+ */
+function showPropertyPurchaseDialog(player, property, propertyId) {
+    const message = `Buy ${property.name} for ${property.price} gold?`;
+    if (confirm(message)) {
+        if (player.gold >= property.price) {
+            player.deductGold(property.price);
+            player.properties.push(propertyId);
+            addEventLog(`🏛️ ${player.name} purchased ${property.name} for ${property.price} gold!`);
+        } else {
+            addEventLog(`⚠️ ${player.name} cannot afford ${property.name}`);
+        }
+        updateGameUI();
+    }
+}
+
+/**
+ * 💵 Calculate rent
+ */
+function calculateRent(property, owner) {
+    let rent = property.rent ? property.rent[0] : 50;
+
+    // Apply owner's hero bonus
+    if (owner.hero.bonus_rent_percent) {
+        rent = Math.floor(rent * (1 + owner.hero.bonus_rent_percent / 100));
+    }
+
+    return rent;
+}
+
+/**
+ * 💀 Handle bankruptcy
+ */
+function handleBankruptcy(player, creditor) {
+    addEventLog(`💀 ${player.name} is bankrupt!`);
+    player.isBankrupt = true;
+
+    // Transfer properties to creditor
+    creditor.properties.push(...player.properties);
+    player.properties = [];
+
+    // Check win condition
+    checkWinCondition();
+}
+
+/**
+ * 🏆 Check win condition
+ */
+function checkWinCondition() {
+    const activePlayers = gameState.players.filter(p => !p.isBankrupt);
+
+    if (activePlayers.length === 1) {
+        const winner = activePlayers[0];
+        addEventLog(`🏆 ${winner.name} wins the game!`);
+        alert(`🏆 ${winner.name} wins!\n\nFinal Gold: ${winner.gold}\nProperties: ${winner.properties.length}`);
+        setTimeout(() => backToMenu(), 2000);
+    }
+}
+
+/**
+ * ⏭️ End turn
+ */
+function endTurn() {
+    if (!gameState.diceRolled) {
+        addEventLog('⚠️ Roll the dice first!');
+        return;
+    }
+
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    currentPlayer.reduceCooldown();
+
+    // Next player
+    gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+
+    // Skip bankrupt players
+    while (gameState.players[gameState.currentPlayerIndex].isBankrupt) {
+        gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+    }
+
+    // If back to player 0, increment turn
+    if (gameState.currentPlayerIndex === 0) {
+        gameState.turnNumber++;
+    }
+
+    gameState.diceRolled = false;
+
+    // Update UI
+    const diceResult = document.getElementById('dice-result');
+    diceResult.innerHTML = '';
+    diceResult.style.display = 'none';
+
+    document.getElementById('roll-dice-btn').disabled = false;
+    document.getElementById('end-turn-btn').disabled = true;
+
+    const newPlayer = gameState.players[gameState.currentPlayerIndex];
+    addEventLog(`\n--- Turn ${gameState.turnNumber}: ${newPlayer.name} ---`);
+
+    updateGameUI();
+}
+
+/**
+ * ⚡ Use ability
+ */
+function useAbility() {
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+
+    if (currentPlayer.abilityCooldown > 0) {
+        addEventLog(`⚠️ Ability on cooldown: ${currentPlayer.abilityCooldown} turns remaining`);
+        return;
+    }
+
+    // Simple ability implementation
+    addEventLog(`⚡ ${currentPlayer.name} used ${currentPlayer.hero.ability_name}!`);
+    currentPlayer.abilityCooldown = currentPlayer.hero.cooldown || 5;
+
+    // TODO: Implement specific hero abilities
+
+    updateGameUI();
+}
+
+/**
+ * 🎨 Update game UI
+ */
+function updateGameUI() {
+    if (!gameState.gameStarted || gameState.players.length === 0) return;
+
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+
+    // Update top bar
+    const turnNumber = document.getElementById('turn-number');
+    const currentPlayerName = document.getElementById('current-player-name');
+
+    if (turnNumber) turnNumber.textContent = gameState.turnNumber;
+    if (currentPlayerName) {
+        currentPlayerName.textContent = currentPlayer.name;
+        currentPlayerName.style.color = currentPlayer.color;
+    }
+
+    // Update player info panel
+    const playerInfo = document.getElementById('player-info');
+    if (playerInfo) {
+        playerInfo.innerHTML = `
+            <div class="player-card" style="border-left: 4px solid ${currentPlayer.color}">
+                <div class="player-stat">
+                    <span class="stat-label">🦸 Hero:</span>
+                    <span class="stat-value">${currentPlayer.hero.name}</span>
+                </div>
+                <div class="player-stat">
+                    <span class="stat-label">💰 Gold:</span>
+                    <span class="stat-value">${currentPlayer.gold}</span>
+                </div>
+                <div class="player-stat">
+                    <span class="stat-label">📍 Position:</span>
+                    <span class="stat-value">${PROPERTIES[currentPlayer.position]?.name || 'Space ' + currentPlayer.position}</span>
+                </div>
+                <div class="player-stat">
+                    <span class="stat-label">🏛️ Properties:</span>
+                    <span class="stat-value">${currentPlayer.properties.length}</span>
+                </div>
+                ${currentPlayer.abilityCooldown > 0
+                    ? `<div class="player-stat"><span class="stat-label">⏳ Ability CD:</span><span class="stat-value">${currentPlayer.abilityCooldown}</span></div>`
+                    : '<div class="player-stat"><span class="stat-label">⚡</span><span class="stat-value" style="color: var(--radiant-primary)">Ability Ready!</span></div>'}
+            </div>
+
+            <div class="all-players-mini">
+                ${gameState.players.map((p, idx) => `
+                    <div class="mini-player ${p.isBankrupt ? 'bankrupt' : ''} ${idx === gameState.currentPlayerIndex ? 'active' : ''}" style="border-color: ${p.color}">
+                        <span>P${idx + 1}</span>
+                        <span>${p.gold}💰</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Update ability button
+    const abilityBtn = document.getElementById('use-ability-btn');
+    if (abilityBtn) {
+        abilityBtn.disabled = currentPlayer.abilityCooldown > 0 || !gameState.diceRolled;
+    }
+}
+
+/**
+ * 📝 Add event to log
+ */
+function addEventLog(message) {
+    const eventLog = document.getElementById('event-log');
+    if (!eventLog) return;
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.textContent = message;
+
+    eventLog.insertBefore(entry, eventLog.firstChild);
+
+    // Limit to 50 entries
+    while (eventLog.children.length > 50) {
+        eventLog.removeChild(eventLog.lastChild);
+    }
+
+    // Scroll to top
+    eventLog.scrollTop = 0;
 }
 
 /**
