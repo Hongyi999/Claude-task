@@ -1,0 +1,191 @@
+[gd_scene load_steps=2 format=3 uid="uid://bx4k5n8m9qr7p"]
+
+[ext_resource type="Script" path="res://scripts/network_lobby.gd" id="1_network_lobby"]
+
+[node name="NetworkLobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_network_lobby")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.15, 0.15, 0.2, 1)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 50.0
+offset_top = 50.0
+offset_right = -50.0
+offset_bottom = -50.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "Multiplayer Lobby"
+horizontal_alignment = 1
+
+[node name="PlayerNameContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="PlayerNameLabel" type="Label" parent="VBoxContainer/PlayerNameContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Player Name:"
+
+[node name="PlayerNameInput" type="LineEdit" parent="VBoxContainer/PlayerNameContainer"]
+custom_minimum_size = Vector2(300, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+placeholder_text = "Enter your name"
+
+[node name="PortContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="PortLabel" type="Label" parent="VBoxContainer/PortContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Port:"
+
+[node name="PortInput" type="LineEdit" parent="VBoxContainer/PortContainer"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "7777"
+placeholder_text = "7777"
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="HostButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Host Game"
+
+[node name="JoinButton" type="Button" parent="VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Join Game"
+
+[node name="JoinContainer" type="VBoxContainer" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 10
+
+[node name="IPContainer" type="HBoxContainer" parent="VBoxContainer/JoinContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="IPLabel" type="Label" parent="VBoxContainer/JoinContainer/IPContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Server IP:"
+
+[node name="IPInput" type="LineEdit" parent="VBoxContainer/JoinContainer"]
+custom_minimum_size = Vector2(300, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "127.0.0.1"
+placeholder_text = "Enter server IP"
+
+[node name="ConnectButton" type="Button" parent="VBoxContainer/JoinContainer"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 20
+text = "Connect"
+
+[node name="StatusLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Welcome! Host a game or join an existing one."
+horizontal_alignment = 1
+
+[node name="LobbyPanel" type="Panel" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/LobbyPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="PlayersLabel" type="Label" parent="VBoxContainer/LobbyPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Players in Lobby"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer/LobbyPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlayersList" type="VBoxContainer" parent="VBoxContainer/LobbyPanel/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="ButtonsContainer" type="HBoxContainer" parent="VBoxContainer/LobbyPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="StartGameButton" type="Button" parent="VBoxContainer/LobbyPanel/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Start Game"
+
+[node name="DisconnectButton" type="Button" parent="VBoxContainer/LobbyPanel/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Disconnect"
+
+[node name="BackButton" type="Button" parent="VBoxContainer"]
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 24
+text = "Back to Menu"
+
+[connection signal="pressed" from="VBoxContainer/ButtonsContainer/HostButton" to="." method="_on_host_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/ButtonsContainer/JoinButton" to="." method="_on_join_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/JoinContainer/ConnectButton" to="." method="_on_connect_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/LobbyPanel/VBoxContainer/ButtonsContainer/StartGameButton" to="." method="_on_start_game_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/LobbyPanel/VBoxContainer/ButtonsContainer/DisconnectButton" to="." method="_on_disconnect_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
