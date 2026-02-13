@@ -321,13 +321,13 @@ class BoardRenderer {
     }
 
     /**
-     * Get color for property faction
+     * Get color for property faction - Dota 2 Themed
      */
     getFactionColor(faction) {
         const colors = {
-            'radiant': 0x4CAF50,  // Green
-            'dire': 0xF44336,      // Red
-            'neutral': 0x9370DB    // Purple
+            'radiant': 0xB8E986,  // 🌟 Bright Radiant Green
+            'dire': 0xC23030,      // 🔴 Blood Red Dire
+            'neutral': 0x6B7280    // 🪨 Stone Gray Neutral
         };
 
         return colors[faction] || 0xbdc3c7;
@@ -356,16 +356,16 @@ class BoardRenderer {
     }
 
     /**
-     * Add corner space indicator
+     * Add corner space indicator - 💰 Gold Coin Style
      */
     addCornerIndicator(spaceGroup, property, size) {
-        const indicatorGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 16);
+        const indicatorGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 8); // Octagon for pixel style
         const indicatorMaterial = new THREE.MeshStandardMaterial({
-            color: 0xf1c40f,
-            roughness: 0.4,
-            metalness: 0.6,
-            emissive: 0xf39c12,
-            emissiveIntensity: 0.3
+            color: 0xFFD700, // Pure gold
+            roughness: 0.3,
+            metalness: 0.7,
+            emissive: 0xF59E0B,
+            emissiveIntensity: 0.5 // Stronger glow
         });
         const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
         indicator.position.y = 0.55;
