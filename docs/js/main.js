@@ -524,43 +524,6 @@ function rollDice() {
 /**
  * 🎯 Handle landing on a space
  */
-function handleLanding(player) {
-    const space = PROPERTIES[player.position];
-    if (!space) return;
-
-    if (space.type === 'property') {
-        // Check if someone owns this property
-        const owner = gameState.players.find(p => p.properties.includes(player.position));
-
-        if (!owner) {
-            // Unowned - offer to buy
-            showPropertyPurchaseDialog(player, space, player.position);
-        } else if (owner.id !== player.id) {
-            // Pay rent
-            const rent = calculateRent(space, owner);
-            if (player.gold >= rent) {
-                player.deductGold(rent);
-                owner.addGold(rent);
-                addEventLog(`💸 ${player.name} paid ${rent} gold rent to ${owner.name}`);
-            } else {
-                addEventLog(`⚠️ ${player.name} cannot afford ${rent} gold rent!`);
-                handleBankruptcy(player, owner);
-            }
-        } else {
-            addEventLog(`🏠 ${player.name} landed on their own property`);
-        }
-    } else if (space.type === 'tax') {
-        const taxAmount = 200;
-        player.deductGold(taxAmount);
-        addEventLog(`💰 ${player.name} paid ${taxAmount} gold in taxes`);
-    } else if (space.type === 'event') {
-        addEventLog(`📜 ${player.name}: ${space.description || 'Event space'}`);
-    } else if (space.type === 'fountain') {
-        addEventLog(`⛲ ${player.name} is at the fountain!`);
-    }
-
-    updateGameUI();
-}
 
 /**
  * 💰 Show property purchase dialog
@@ -584,11 +547,8 @@ function showPropertyPurchaseDialog(player, property, propertyId) {
  */
 function calculateRent(property, owner) {
     let rent = property.rent ? property.rent[0] : 50;
-
-    // Apply owner's hero bonus
-    if (owner.hero.bonus_rent_percent) {
-        rent = Math.floor(rent * (1 + owner.hero.bonus_rent_percent / 100));
-    }
+    return rent;
+}
 
     return rent;
 }
@@ -666,22 +626,6 @@ function endTurn() {
 /**
  * ⚡ Use ability
  */
-function useAbility() {
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-
-    if (currentPlayer.abilityCooldown > 0) {
-        addEventLog(`⚠️ Ability on cooldown: ${currentPlayer.abilityCooldown} turns remaining`);
-        return;
-    }
-
-    // Simple ability implementation
-    addEventLog(`⚡ ${currentPlayer.name} used ${currentPlayer.hero.ability_name}!`);
-    currentPlayer.abilityCooldown = currentPlayer.hero.cooldown || 5;
-
-    // TODO: Implement specific hero abilities
-
-    updateGameUI();
-}
 
 /**
  * 🎨 Update game UI
@@ -795,4 +739,18 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
+}
+
+/**
+ * ⚡ Use hero ability
+ */
+function useAbility() {
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+
+    // Use AbilityManager to handle all abilities
+    const success = AbilityManager.useAbility(currentPlayer);
+
+    if (success) {
+        updateGameUI();
+    }
 }

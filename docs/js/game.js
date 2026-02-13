@@ -40,19 +40,15 @@ class Player {
     collectSalary() {
         let salary = GAME_CONSTANTS.BASE_SALARY;
 
-        // Apply hero bonuses
-        if (this.hero.bonus_salary) {
-            salary += this.hero.bonus_salary;
-        }
-
-        // Apply item bonuses
-        if (this.items.includes('wraith_band')) {
-            salary += 50;
-        }
-
-        this.gold += salary;
-        addEventLog(`${this.name} collected ${salary} gold salary!`);
-        return salary;
+        // Apply passive abilities
+        let salaryData = { amount: salary };
+        salaryData = AbilityManager.applyPassiveAbilities(this, 'salary', salaryData);
+        
+        const finalSalary = salaryData.amount;
+        this.gold += finalSalary;
+        
+        addEventLog(`💰 ${this.name} collected ${finalSalary} gold salary!`);
+        return finalSalary;
     }
 
     addGold(amount) {
@@ -494,5 +490,411 @@ function addEventLog(message) {
     // Limit to 20 entries
     while (eventLog.children.length > 20) {
         eventLog.removeChild(eventLog.lastChild);
+    }
+}
+
+/**
+ * 🎭 HERO ABILITY SYSTEM
+ */
+
+class AbilityManager {
+    /**
+     * 🎯 Check if ability can be used
+     */
+    static canUseAbility(player) {
+        if (player.abilityCooldown > 0) {
+            return { canUse: false, reason: `Ability on cooldown: ${player.abilityCooldown} turns` };
+        }
+
+        // Check hero-specific requirements
+        const hero = player.hero;
+        
+        if (hero.id === 'lina') {
+            // Lina needs at least one other player with properties
+            const targets = gameState.players.filter(p => 
+                p.id !== player.id && !p.isBankrupt && p.properties.length > 0
+            );
+            if (targets.length === 0) {
+                return { canUse: false, reason: 'No valid targets' };
+            }
+        }
+
+        return { canUse: true };
+    }
+
+    /**
+     * ⚡ Use hero ability
+     */
+    static useAbility(player) {
+        const check = this.canUseAbility(player);
+        if (!check.canUse) {
+            addEventLog(`⚠️ Cannot use ability: ${check.reason}`);
+            return false;
+        }
+
+        const hero = player.hero;
+        let success = false;
+
+        switch (hero.id) {
+            case 'alchemist':
+                success = this.abilityAlchemist(player);
+                break;
+            case 'axe':
+                success = this.abilityAxe(player);
+                break;
+            case 'bounty_hunter':
+                success = this.abilityBountyHunter(player);
+                break;
+            case 'dragon_knight':
+                success = this.abilityDragonKnight(player);
+                break;
+            case 'juggernaut':
+                success = this.abilityJuggernaut(player);
+                break;
+            case 'lina':
+                success = this.abilityLina(player);
+                break;
+            case 'phantom_assassin':
+                success = this.abilityPhantomAssassin(player);
+                break;
+            case 'pudge':
+                success = this.abilityPudge(player);
+                break;
+            case 'sniper':
+                success = this.abilitySniper(player);
+                break;
+            case 'zeus':
+                success = this.abilityZeus(player);
+                break;
+            default:
+                addEventLog(`⚠️ ${hero.name} has no ability implemented yet`);
+                return false;
+        }
+
+        if (success) {
+            player.abilityCooldown = hero.cooldown || 0;
+            updateGameUI();
+        }
+
+        return success;
+    }
+
+    // ============================================
+    // 🦸 HERO ABILITY IMPLEMENTATIONS
+    // ============================================
+
+    /**
+     * 💰 Alchemist - Greevil's Greed (Passive)
+     * Bonus gold from salary and properties
+     */
+    static abilityAlchemist(player) {
+        const bonus = 200;
+        player.addGold(bonus);
+        addEventLog(`⚗️ ${player.name} used Greevil's Greed! Gained ${bonus} bonus gold!`);
+        return true;
+    }
+
+    /**
+     * 🪓 Axe - Berserker's Call (Active)
+     * Force nearby players to pay rent
+     */
+    static abilityAxe(player) {
+        const rentAmount = 100;
+        let totalCollected = 0;
+
+        gameState.players.forEach(other => {
+            if (other.id === player.id || other.isBankrupt) return;
+
+            // Check if within 3 spaces
+            const distance = Math.abs(other.position - player.position);
+            if (distance <= 3 || distance >= GAME_CONSTANTS.TOTAL_SPACES - 3) {
+                if (other.gold >= rentAmount) {
+                    other.deductGold(rentAmount);
+                    player.addGold(rentAmount);
+                    totalCollected += rentAmount;
+                    addEventLog(`🪓 ${other.name} was forced to pay ${rentAmount} gold to ${player.name}!`);
+                }
+            }
+        });
+
+        if (totalCollected > 0) {
+            addEventLog(`⚔️ ${player.name} used Berserker's Call! Collected ${totalCollected} total gold!`);
+            return true;
+        } else {
+            addEventLog(`⚠️ No players nearby to affect`);
+            return false;
+        }
+    }
+
+    /**
+     * 🗡️ Bounty Hunter - Jinada (Active)
+     * Next 3 rent payments reduced by 50%
+     */
+    static abilityBountyHunter(player) {
+        player.jinada_active = 3; // 3 uses
+        addEventLog(`🗡️ ${player.name} used Jinada! Next 3 rent payments reduced by 50%!`);
+        return true;
+    }
+
+    /**
+     * 🐉 Dragon Knight - Dragon Blood (Active)
+     * Immune to next 2 negative effects
+     */
+    static abilityDragonKnight(player) {
+        player.dragon_blood_charges = 2;
+        addEventLog(`🐉 ${player.name} activated Dragon Blood! Immune to next 2 negative effects!`);
+        return true;
+    }
+
+    /**
+     * ⚔️ Juggernaut - Omnislash (Active)
+     * Roll dice twice and choose result
+     */
+    static abilityJuggernaut(player) {
+        const roll1 = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+        const roll2 = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+
+        const choice = confirm(
+            `⚔️ Omnislash!\n\nRoll 1: ${roll1}\nRoll 2: ${roll2}\n\nChoose Roll 1? (Cancel for Roll 2)`
+        );
+
+        const chosen = choice ? roll1 : roll2;
+        const oldPos = player.position;
+        player.position = (oldPos + chosen) % GAME_CONSTANTS.TOTAL_SPACES;
+
+        // Check if passed fountain
+        if (player.position < oldPos) {
+            player.collectSalary();
+        }
+
+        addEventLog(`⚔️ ${player.name} used Omnislash! Chose roll ${chosen} and moved!`);
+        
+        // Update visuals
+        if (boardRenderer) {
+            boardRenderer.updatePlayerTokens(gameState.players);
+        }
+
+        // Handle landing
+        setTimeout(() => {
+            handleLanding(player);
+            updateGameUI();
+        }, 500);
+
+        // Mark dice as rolled
+        gameState.diceRolled = true;
+        document.getElementById('roll-dice-btn').disabled = true;
+        document.getElementById('end-turn-btn').disabled = false;
+
+        return true;
+    }
+
+    /**
+     * 🔥 Lina - Laguna Blade (Active)
+     * Force target to sell property at half price
+     */
+    static abilityLina(player) {
+        const targets = gameState.players.filter(p => 
+            p.id !== player.id && !p.isBankrupt && p.properties.length > 0
+        );
+
+        if (targets.length === 0) {
+            addEventLog(`⚠️ No valid targets for Laguna Blade`);
+            return false;
+        }
+
+        // Show target selection
+        const targetNames = targets.map((p, i) => `${i + 1}. ${p.name} (${p.properties.length} properties)`).join('\n');
+        const selection = prompt(`🔥 Laguna Blade!\n\nSelect target:\n${targetNames}\n\nEnter number:`);
+        
+        const targetIndex = parseInt(selection) - 1;
+        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= targets.length) {
+            addEventLog(`⚠️ Invalid target`);
+            return false;
+        }
+
+        const target = targets[targetIndex];
+        const propertyId = target.properties[Math.floor(Math.random() * target.properties.length)];
+        const property = PROPERTIES[propertyId];
+        const sellPrice = Math.floor(property.price / 2);
+
+        // Remove property from target
+        target.properties = target.properties.filter(p => p !== propertyId);
+        target.addGold(sellPrice);
+
+        addEventLog(`🔥 ${player.name} used Laguna Blade on ${target.name}!`);
+        addEventLog(`💥 ${target.name} was forced to sell ${property.name} for ${sellPrice} gold!`);
+
+        return true;
+    }
+
+    /**
+     * 🗡️ Phantom Assassin - Coup de Grace (Passive)
+     * Already handled in rent calculation
+     */
+    static abilityPhantomAssassin(player) {
+        // This is passive - trigger critical strike
+        player.crit_guaranteed = true;
+        addEventLog(`🗡️ ${player.name} prepared Coup de Grace! Next rent will be critical!`);
+        return true;
+    }
+
+    /**
+     * 🪝 Pudge - Meat Hook (Active)
+     * Pull another player to your position
+     */
+    static abilityPudge(player) {
+        const targets = gameState.players.filter(p => 
+            p.id !== player.id && !p.isBankrupt
+        );
+
+        if (targets.length === 0) {
+            addEventLog(`⚠️ No valid targets`);
+            return false;
+        }
+
+        const targetNames = targets.map((p, i) => `${i + 1}. ${p.name} (at ${PROPERTIES[p.position]?.name})`).join('\n');
+        const selection = prompt(`🪝 Meat Hook!\n\nSelect target to pull:\n${targetNames}\n\nEnter number:`);
+        
+        const targetIndex = parseInt(selection) - 1;
+        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= targets.length) {
+            addEventLog(`⚠️ Invalid target`);
+            return false;
+        }
+
+        const target = targets[targetIndex];
+        const oldPos = target.position;
+        target.position = player.position;
+
+        addEventLog(`🪝 ${player.name} hooked ${target.name} from ${PROPERTIES[oldPos]?.name}!`);
+        
+        // Update visuals
+        if (boardRenderer) {
+            boardRenderer.updatePlayerTokens(gameState.players);
+        }
+
+        // Target lands on space
+        setTimeout(() => {
+            handleLanding(target);
+            updateGameUI();
+        }, 500);
+
+        return true;
+    }
+
+    /**
+     * 🎯 Sniper - Assassinate (Active)
+     * Collect rent from players within 3 spaces
+     */
+    static abilitySniper(player) {
+        const rentAmount = 80;
+        let totalCollected = 0;
+
+        gameState.players.forEach(other => {
+            if (other.id === player.id || other.isBankrupt) return;
+
+            const distance = Math.abs(other.position - player.position);
+            if (distance <= 3 || distance >= GAME_CONSTANTS.TOTAL_SPACES - 3) {
+                if (other.gold >= rentAmount) {
+                    other.deductGold(rentAmount);
+                    player.addGold(rentAmount);
+                    totalCollected += rentAmount;
+                    addEventLog(`🎯 ${other.name} was sniped for ${rentAmount} gold!`);
+                }
+            }
+        });
+
+        if (totalCollected > 0) {
+            addEventLog(`🎯 ${player.name} used Assassinate! Collected ${totalCollected} total gold!`);
+            return true;
+        } else {
+            addEventLog(`⚠️ No players in range`);
+            return false;
+        }
+    }
+
+    /**
+     * ⚡ Zeus - Thundergod's Wrath (Active)
+     * All players pay 50 gold
+     */
+    static abilityZeus(player) {
+        const damage = 50;
+        let totalCollected = 0;
+
+        gameState.players.forEach(other => {
+            if (other.id === player.id || other.isBankrupt) return;
+
+            if (other.gold >= damage) {
+                other.deductGold(damage);
+                player.addGold(damage);
+                totalCollected += damage;
+            }
+        });
+
+        addEventLog(`⚡ ${player.name} unleashed Thundergod's Wrath!`);
+        addEventLog(`⚡ All players struck for ${damage} gold! Collected ${totalCollected} total!`);
+
+        return true;
+    }
+
+    /**
+     * 🎲 Apply passive abilities during gameplay
+     */
+    static applyPassiveAbilities(player, event, data) {
+        const hero = player.hero;
+
+        switch (event) {
+            case 'salary':
+                if (hero.id === 'alchemist' && hero.bonus_salary) {
+                    data.amount += hero.bonus_salary;
+                    addEventLog(`💰 Greevil's Greed: +${hero.bonus_salary} gold!`);
+                }
+                break;
+
+            case 'rent_payment':
+                // Bounty Hunter - Jinada
+                if (player.jinada_active && player.jinada_active > 0) {
+                    data.amount = Math.floor(data.amount * 0.5);
+                    player.jinada_active--;
+                    addEventLog(`🗡️ Jinada: Rent reduced to ${data.amount}! (${player.jinada_active} uses left)`);
+                }
+
+                // Dragon Knight - Dragon Blood
+                if (player.dragon_blood_charges && player.dragon_blood_charges > 0) {
+                    data.amount = 0;
+                    player.dragon_blood_charges--;
+                    addEventLog(`🐉 Dragon Blood: Rent negated! (${player.dragon_blood_charges} charges left)`);
+                }
+                break;
+
+            case 'rent_collection':
+                // Phantom Assassin - Coup de Grace
+                if (hero.id === 'phantom_assassin') {
+                    const critChance = player.crit_guaranteed ? 100 : (hero.crit_chance || 15);
+                    if (Math.random() * 100 < critChance) {
+                        data.amount *= 2;
+                        addEventLog(`🗡️ CRITICAL STRIKE! Rent doubled to ${data.amount}!`);
+                        player.crit_guaranteed = false;
+                    }
+                }
+
+                // Alchemist - rent bonus
+                if (hero.id === 'alchemist' && hero.bonus_rent_percent) {
+                    const bonus = Math.floor(data.amount * (hero.bonus_rent_percent / 100));
+                    data.amount += bonus;
+                    addEventLog(`💰 Greevil's Greed: +${bonus} bonus rent!`);
+                }
+                break;
+
+            case 'tax':
+                // Dragon Knight - Dragon Blood
+                if (player.dragon_blood_charges && player.dragon_blood_charges > 0) {
+                    data.amount = 0;
+                    player.dragon_blood_charges--;
+                    addEventLog(`🐉 Dragon Blood: Tax negated! (${player.dragon_blood_charges} charges left)`);
+                }
+                break;
+        }
+
+        return data;
     }
 }
