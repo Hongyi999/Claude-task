@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ancient Tycoon - Dota 2 Monopoly</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen active">
+        <div class="menu-container">
+            <h1 class="game-title">⚔️ Ancient Tycoon ⚔️</h1>
+            <p class="subtitle">A Dota 2 Monopoly Game</p>
+
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="showHeroSelection()">
+                    🎮 Start Game
+                </button>
+                <button class="btn btn-secondary" onclick="showInstructions()">
+                    📖 How to Play
+                </button>
+                <button class="btn btn-secondary" onclick="showAbout()">
+                    ℹ️ About
+                </button>
+            </div>
+
+            <div class="version">v0.1.0 - Web Edition</div>
+        </div>
+    </div>
+
+    <!-- Hero Selection -->
+    <div id="hero-selection" class="screen">
+        <div class="hero-selection-container">
+            <h2>Select Your Heroes</h2>
+
+            <div class="player-count-selector">
+                <label for="player-count">Number of Players:</label>
+                <input type="range" id="player-count" min="2" max="5" value="2"
+                       oninput="updatePlayerCount(this.value)">
+                <span id="player-count-display">2</span>
+            </div>
+
+            <div id="hero-grid" class="hero-grid"></div>
+
+            <div class="selection-info">
+                <p id="selection-status">Select <span id="heroes-needed">2</span> heroes to continue</p>
+            </div>
+
+            <div class="hero-selection-buttons">
+                <button class="btn btn-secondary" onclick="backToMenu()">Back</button>
+                <button class="btn btn-primary" id="start-game-btn" onclick="startGame()" disabled>
+                    Start Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <div class="game-layout">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="turn-info">
+                    <span>Turn: <strong id="turn-number">1</strong></span>
+                    <span class="separator">|</span>
+                    <span>Current Player: <strong id="current-player-name">Player 1</strong></span>
+                </div>
+                <button class="btn btn-small" onclick="backToMenu()">Menu</button>
+            </div>
+
+            <!-- Main Game Area -->
+            <div class="game-content">
+                <!-- Game Board -->
+                <div class="board-container">
+                    <canvas id="game-board" width="800" height="800"></canvas>
+                </div>
+
+                <!-- Side Panel -->
+                <div class="side-panel">
+                    <!-- Player Info -->
+                    <div class="panel-section">
+                        <h3>Player Info</h3>
+                        <div id="player-info" class="player-info"></div>
+                    </div>
+
+                    <!-- Game Actions -->
+                    <div class="panel-section">
+                        <h3>Actions</h3>
+                        <button class="btn btn-primary btn-block" id="roll-dice-btn" onclick="rollDice()">
+                            🎲 Roll Dice
+                        </button>
+                        <button class="btn btn-secondary btn-block" id="end-turn-btn" onclick="endTurn()" disabled>
+                            ⏭️ End Turn
+                        </button>
+                        <div id="dice-result" class="dice-result"></div>
+                    </div>
+
+                    <!-- Event Log -->
+                    <div class="panel-section event-log-section">
+                        <h3>Event Log</h3>
+                        <div id="event-log" class="event-log"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('instructions-modal')">&times;</span>
+            <h2>How to Play</h2>
+            <div class="instructions">
+                <h3>🎯 Objective</h3>
+                <p>Become the richest player by buying properties and collecting rent!</p>
+
+                <h3>🎮 Gameplay</h3>
+                <ul>
+                    <li><strong>Roll Dice:</strong> Click "Roll Dice" to move your hero</li>
+                    <li><strong>Buy Properties:</strong> Land on unowned properties to purchase them</li>
+                    <li><strong>Collect Rent:</strong> Earn gold when others land on your properties</li>
+                    <li><strong>Pass Fountain:</strong> Collect 200 gold when you pass the starting position</li>
+                    <li><strong>Hero Abilities:</strong> Each hero has unique passive bonuses</li>
+                </ul>
+
+                <h3>🏆 Winning</h3>
+                <p>Be the last player standing or have the most gold when the game ends!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('about-modal')">&times;</span>
+            <h2>About Ancient Tycoon</h2>
+            <p>A Dota 2 themed Monopoly-style board game.</p>
+            <p>All Dota 2 characters and assets are property of Valve Corporation.</p>
+            <p class="mt-20">Created with ❤️ for educational purposes.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/constants.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
