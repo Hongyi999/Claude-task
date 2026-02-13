@@ -25,9 +25,9 @@ class BoardRenderer {
      * Create the 3D game board
      */
     createBoard() {
-        // Board layout: 36 spaces in a square (9x9 grid, outer ring only)
-        const boardSize = 36; // Total spaces
-        const spacesPerSide = 9; // 9 spaces per side
+        // Board layout: 40 spaces in a square (10 per side)
+        const boardSize = 40; // Total spaces (matching Monopoly board)
+        const spacesPerSide = 10; // 10 spaces per side
         const spaceSize = 3;
         const boardWidth = spacesPerSide * spaceSize;
 
@@ -217,7 +217,7 @@ class BoardRenderer {
      * Create property spaces around the board
      */
     createSpaces(spacesPerSide, spaceSize) {
-        const totalSpaces = 36;
+        const totalSpaces = 40; // Monopoly standard: 40 spaces
         const halfBoard = (spacesPerSide * spaceSize) / 2;
 
         for (let i = 0; i < totalSpaces; i++) {
@@ -240,19 +240,19 @@ class BoardRenderer {
         let x, z;
 
         if (index < spacesPerSide) {
-            // Bottom edge (0-8)
+            // Bottom edge (0-9)
             x = -halfBoard + (index * spaceSize) + spaceSize / 2;
             z = -halfBoard + spaceSize / 2;
         } else if (index < spacesPerSide * 2 - 1) {
-            // Right edge (9-16)
+            // Right edge (10-18)
             x = halfBoard - spaceSize / 2;
             z = -halfBoard + ((index - spacesPerSide + 1) * spaceSize) + spaceSize / 2;
         } else if (index < spacesPerSide * 3 - 2) {
-            // Top edge (17-25)
+            // Top edge (19-27)
             x = halfBoard - ((index - (spacesPerSide * 2 - 2)) * spaceSize) - spaceSize / 2;
             z = halfBoard - spaceSize / 2;
         } else {
-            // Left edge (26-35)
+            // Left edge (28-39)
             x = -halfBoard + spaceSize / 2;
             z = halfBoard - ((index - (spacesPerSide * 3 - 3)) * spaceSize) - spaceSize / 2;
         }
@@ -269,7 +269,8 @@ class BoardRenderer {
 
         // Determine color based on property type
         const color = this.getPropertyColor(property);
-        const isCorner = property.type === 'corner';
+        // Corner spaces: 0 (Fountain), 10 (Jail), 20 (Free Parking), 30 (Go to Jail)
+        const isCorner = (index % 10 === 0);
         const size = isCorner ? 3.2 : spaceSize;
 
         // Base platform
@@ -306,35 +307,29 @@ class BoardRenderer {
      */
     getPropertyColor(property) {
         const colorMap = {
-            'corner': 0xecf0f1,
-            'property': this.getColorSetColor(property.color_set),
-            'transportation': 0x95a5a6,
-            'utility': 0xf39c12,
+            'fountain': 0x4ECDC4,
+            'jail': 0x95a5a6,
+            'free': 0x2ecc71,
+            'property': this.getFactionColor(property.faction),
+            'item': 0xf39c12,
             'tax': 0xe74c3c,
-            'chance': 0x3498db,
-            'community_chest': 0x9b59b6
+            'event': 0x9b59b6
         };
 
         return colorMap[property.type] || 0xbdc3c7;
     }
 
     /**
-     * Get color for property color set
+     * Get color for property faction
      */
-    getColorSetColor(colorSet) {
+    getFactionColor(faction) {
         const colors = {
-            'brown': 0x8B4513,
-            'light_blue': 0x87CEEB,
-            'pink': 0xFF69B4,
-            'orange': 0xFF8C00,
-            'red': 0xFF0000,
-            'yellow': 0xFFD700,
-            'green': 0x00FF00,
-            'deep_blue': 0x00008B,
-            'independent': 0x9370DB
+            'radiant': 0x4CAF50,  // Green
+            'dire': 0xF44336,      // Red
+            'neutral': 0x9370DB    // Purple
         };
 
-        return colors[colorSet] || 0xbdc3c7;
+        return colors[faction] || 0xbdc3c7;
     }
 
     /**
@@ -342,13 +337,14 @@ class BoardRenderer {
      */
     createPropertyLabel(spaceGroup, property, size) {
         // Color stripe for properties
-        if (property.type === 'property') {
+        if (property.type === 'property' && property.faction) {
+            const color = this.getFactionColor(property.faction);
             const stripeGeometry = new THREE.BoxGeometry(size * 0.8, 0.35, 0.3);
             const stripeMaterial = new THREE.MeshStandardMaterial({
-                color: this.getColorSetColor(property.color_set),
+                color: color,
                 roughness: 0.5,
                 metalness: 0.5,
-                emissive: this.getColorSetColor(property.color_set),
+                emissive: color,
                 emissiveIntensity: 0.2
             });
             const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
